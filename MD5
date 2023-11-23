@@ -1,0 +1,17 @@
+82edbb9f1320097de0caa4f4ad7d03d7 *DESCRIPTION
+2aa5735b3486eb32e7100172504d8854 *NAMESPACE
+fac931f835f12c45b4390b5c758e0aae *NEWS
+93d16fd2d03df2959c8d9906e5deeb33 *R/getReversions.R
+97d050321aa1333bf23dc6d86d3097b1 *R/helpers.R
+a538635742970ddce273f6576da45b0d *build/vignette.rds
+fea7db2991d8e3911541322336ed9777 *inst/doc/Introduction.R
+30296c0fe4320c6a7cfc21c7141d5845 *inst/doc/Introduction.Rmd
+05ccb0df3f8328a199cf05247a1599d0 *inst/doc/Introduction.html
+02de2833a2decd58085e50972b283a6e *inst/extdata/toy_alignments_1.bam
+1157bdd056b29a3f9fb59c25bc228d97 *inst/extdata/toy_alignments_1.bam.bai
+7b7bdd35622e742599bc6f96707555c4 *inst/extdata/toy_alignments_2.bam
+05a037385dbb92b12a651400c5db5282 *inst/extdata/toy_alignments_2.bam.bai
+af099cdc8e50451c9efe537334fbf530 *inst/extdata/toy_alignments_3.bam
+6c261ac3f4eeccfc405e89d4129f673f *inst/extdata/toy_alignments_3.bam.bai
+cf9e3e06d94d39c3caa7ecff8e730a68 *man/getReversions.Rd
+30296c0fe4320c6a7cfc21c7141d5845 *vignettes/Introduction.Rmd

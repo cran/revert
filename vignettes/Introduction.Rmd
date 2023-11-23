@@ -1,0 +1,170 @@
+---
+title: "revert"
+author: "Hui Xiao, Adam Mills, John Alexander, Stephen Pettitt, Syed Haider"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: yes
+    theme: united
+    highlight: kate
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+    pdf_document:
+      toc: yes
+  pdf_document:
+    toc: yes
+vignette: >
+  %\VignetteIndexEntry{Introduction}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  cache = TRUE,
+  eval = TRUE
+  )
+```
+
+## Overview
+
+revert is an R package for detecting reversions from next-generation DNA sequencing data. It analyses reads aligned to the locus of a given pathogenic mutation and reports reversion events where secondary mutations have restored or undone the deleterious effect of the original pathogenic mutation, e.g., secondary indels complement to a frameshift pathogenic mutation converting the orignal frameshift mutation into inframe mutaions, deletions or SNVs that replaced the original pathogenic mutation restoring the open reading frame, SNVs changing the stop codon caused by the original nonsense SNV into an amino acid, etc. The revert package is designed to be applicable to most types of DNA sequencing data. The current version works for whole genome sequencing (WGS) and targeted genomic sequencing data such as whole exome sequencing (WES) and targeted amplicon sequecing (TAS) data. To start using revert quickly, see the [Examples](#examples) section.
+
+## Prerequisite
+
+-   samtools \>= 1.11
+
+-   R \>= 4.1.0
+
+## Inputs
+
+### Required information for running revert
+
+-   A sorted BAM file containing aligned reads to be analysed (see below)
+-   Reference genome version (currently support available BSgenome data packages in R, e.g., "BSgenome.Hsapiens.UCSC.hg38")
+-   A pathogenic mutation (currently only support exonic mutations)
+    -   Chromosome
+    -   Genomic coordinate of start position
+    -   Mutation type ("SNV", "DEL" or "INS")
+    -   Reference and alternative alleles for a SNV
+    -   Deleted sequence or length of deleted sequence for a DEL
+    -   Inserted sequence for an INS
+-   Length of flanking regions surrounding the pathogenic mutation for detecting reversions
+-   Whether the gene carrying pathogenic mutation is on reverse strand
+-   Whether to detect reversions for wild-type reads. Only TRUE for pathogenic mutation targeted gene editing experiments as most of the wild-type reads are reverted to wild-type
+
+### Preparation of BAM file
+
+revert performs reversion detection based on the provided BAM file and the reads alignments are crucial for identifying the reversion mutations. Many state-of-art NGS aligners enable clipping modes to improve the accuracy of reads alignment by focusing on the high-confidence and well-aligned parts of a read and discarding (hard-clipping) or ignoring (soft-clipping) the non-aligned parts caused by adapters, indels or translocations. The indels in clipped reads are important because they might be potential reversions for the pathogenic mutation if they convert the pathogenic mutation into inframe variants and restore the open reading frame. Consequently, soft-clipping or hard-clipping of reads alignment will result in loss of some important reversions. One practical solution to this limitation is to align the original reads without clipping by using an aligner capable of performing end-to-end read alignment, e.g., "bowtie2" with the parameter `--end-to-end`. Furthermore, relaxing gap opening and extension penalty scores for read alignment will result in more mapped reads by allowing more frequent and larger deletions, e.g., setting parameters `--rdg 1,1` for "bowtie2". However, it is to be noted that relaxing too much on alignment penalty scores can be detrimental to the overall quality of the alignment.
+
+## Outputs
+
+The main function `getReversions()` outputs a list object containing two tables summarizing the reversion detection:
+
+1.  A table showing frequencies of different types of events including:
+
+    -   reads_aligned_to_original_mutation
+    -   reads_wildtype
+    -   reads_with_original_mutation
+    -   reads_with_replacement_mutations
+    -   reads_with_reversions
+    -   reads_with_complement_reversions
+    -   reads_with_replacement_reversions
+    -   unique_reversions
+
+2.  A table including the details of reversion mutations detected from the input bam file for the pathogenic mutation, with the following columns:
+
+    -   rev_id: Unique ID for reversion event
+
+    -   rev_freq: Frequency of reversion event
+
+    -   rev_type: Type of reversion event, i.e., complement reversion to pathogenic mutation, replacement reversion of pathogenic mutation, or alternative reversion to pathogenic mutation
+
+    -   rev_mut_number: Index of each mutation in a reversion event
+
+    -   mut_id: Unique ID for reversion mutation
+
+    -   chr: Chromosome
+
+    -   mut_start_pos: Start position of reversion mutation
+
+    -   mut_type: Type of reversion mutation, i.e., SNV, DEL or INS
+
+    -   mut_seq: Sequence changes of mutation, i.e., inserted or deleted sequences for indels, or reference and alternative alleles for SNVs
+
+    -   mut_length: Length of mut_seq, 0 for SNV
+
+    -   mut_hgvs: HGVS Genomic DNA ID of reversion mutation
+
+    -   pathog_mut_hgvs: Original pathogenic reversion mutation
+
+    -   dist_to_pathog_mut: Distance between original pathogenic mutation and reversion mutation
+
+## Examples {#examples}
+
+### Reversion detection for a pathogenic SNV
+
+For example, to detect reversions for a pathogenic deletion variant "chr17:g.43082434G\>A" in BRCA1, run revert as follows:
+
+```{r del_example, eval=FALSE}
+library(revert)
+
+bam.file1 <- system.file('extdata', 'toy_alignments_1.bam', package = 'revert')
+
+reversions <- getReversions(
+	bam.file = bam.file1, 
+	genome.version = "BSgenome.Hsapiens.UCSC.hg38",
+	chromosome = "chr17", 
+	pathog.mut.start = 43082434, 
+	pathog.mut.type = "SNV", 
+	snv.reference.allele = "G", 
+	snv.alternative.allele = "A",
+	flanking.window = 100,
+	minus.strand = TRUE
+	)
+```
+
+### Reversion detection for a pathogenic deletion variant
+
+For example, to detect reversions for a pathogenic deletion variant "chr13:g.32338763-32338764delAT" in BRCA2, run revert as follows:
+
+```{r ins_example, eval=FALSE}
+bam.file2 <- system.file('extdata', 'toy_alignments_2.bam', package = 'revert')
+
+reversions <- getReversions(
+	bam.file = bam.file2, 
+	genome.version = "BSgenome.Hsapiens.UCSC.hg38",
+	chromosome = "chr13", 
+	pathog.mut.start = 32338763, 
+	pathog.mut.type = "DEL", 
+	deletion.sequence = "AT",
+	deletion.length = 2,
+	flanking.window = 100
+	)
+```
+
+### Reversion detection for a pathogenic insertion variant
+
+For example, to detect reversions for a pathogenic deletion variant "chr17:g.43092689_43092690insT" in BRCA1, run revert as follows:
+
+```{r snv_example, eval=FALSE}
+bam.file3 <- system.file('extdata', 'toy_alignments_3.bam', package = 'revert')
+
+reversions <- getReversions(
+	bam.file = bam.file3, 
+	genome.version = "BSgenome.Hsapiens.UCSC.hg38",
+	chromosome = "chr17", 
+	pathog.mut.start = 43092689, 
+	pathog.mut.type = "INS", 
+	insertion.sequence = "T",
+	flanking.window = 100,
+	minus.strand = TRUE
+	)	
+```
+
+## Acknowledgements
+
+Development of revert was supported by [Breast Cancer Now](https://breastcancernow.org/).
